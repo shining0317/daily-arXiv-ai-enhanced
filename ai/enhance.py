@@ -26,6 +26,8 @@ if os.path.exists('.env'):
     dotenv.load_dotenv()
 template = open("template.txt", "r").read()
 system = open("system.txt", "r").read()
+# 【新增】：强制加上最严厉的格式指令，打死也不允许输出 Markdown 标记或废话
+system += "\n\nCRITICAL INSTRUCTION: You must output ONLY raw valid JSON. Do NOT wrap the JSON in markdown code blocks like ```json. Do not output any conversational text before or after the JSON."
 
 def parse_args():
     """解析命令行参数"""
