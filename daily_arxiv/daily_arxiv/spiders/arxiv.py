@@ -17,7 +17,7 @@ class ArxivSpider(scrapy.Spider):
     name = "arxiv"  # 爬虫名称
     allowed_domains = ["arxiv.org"]  # 允许爬取的域名
 
-    def parse(self, response):
+def parse(self, response):
         # 提取每篇论文的信息
         anchors = []
         for li in response.css("div[id=dlpage] ul li"):
@@ -25,8 +25,13 @@ class ArxivSpider(scrapy.Spider):
             if href and "item" in href:
                 anchors.append(int(href.split("item")[-1]))
 
+        count = 0  # 【新增1】设置一个计数器，初始值为0
+
         # 遍历每篇论文的详细信息
         for paper in response.css("dl dt"):
+            if count >= 5:  # 【新增2】如果已经抓够了5篇，直接停止抓取
+                break
+
             paper_anchor = paper.css("a[name^='item']::attr(name)").get()
             if not paper_anchor:
                 continue
@@ -61,6 +66,7 @@ class ArxivSpider(scrapy.Spider):
                 # 检查论文分类是否与目标分类有交集
                 paper_categories = set(categories_in_paper)
                 if paper_categories.intersection(self.target_categories):
+                    count += 1  # 【新增3】成功找到一篇目标大类的论文，计数器加1
                     yield {
                         "id": arxiv_id,
                         "categories": list(paper_categories),  # 添加分类信息用于调试
@@ -71,6 +77,7 @@ class ArxivSpider(scrapy.Spider):
             else:
                 # 如果无法获取分类信息，记录警告但仍然返回论文（保持向后兼容）
                 self.logger.warning(f"Could not extract categories for paper {arxiv_id}, including anyway")
+                count += 1  # 【新增(可选)】如果没分类信息但强行返回了，也算进额度里
                 yield {
                     "id": arxiv_id,
                     "categories": [],
