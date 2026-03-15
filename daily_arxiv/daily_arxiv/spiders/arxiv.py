@@ -29,7 +29,7 @@ def parse(self, response):
 
         # 遍历每篇论文的详细信息
         for paper in response.css("dl dt"):
-            if count >= 5:  # 【新增2】如果已经抓够了5篇，直接停止抓取
+            if count >= 30:  # 【新增2】如果已经抓够了5篇，直接停止抓取
                 break
 
             paper_anchor = paper.css("a[name^='item']::attr(name)").get()
@@ -48,9 +48,45 @@ def parse(self, response):
             arxiv_id = abstract_link.split("/")[-1]
             
             # 获取对应的论文描述部分 (dd元素)
-            paper_dd = paper.xpath("following-sibling::dd[1]")
-            if not paper_dd:
+            # ================== 【新增：精准关键词拦截器】 ==================
+            # 1. 提取网页上的论文标题，并全部转换为小写
+            title_parts = paper_dd.css(".list-title::text, .list-title *::text").getall()
+            title_text = "".join(title_parts).lower()
+            
+            # 2. 定义你毕设的核心关键词（注意：必须全部用小写英文字母）
+            my_keywords = [
+                # === 物质与物理性质 (DES核心) ===
+                "eutectic",          # 共晶 (涵盖 Deep Eutectic Solvents)
+                "polarity",          # 极性
+                "melting point",     # 熔点
+                "enthalpy",          # 焓变/熔化焓
+
+                # === 算法与预测基础 ===
+                "machine learning",  # 机器学习
+                "property prediction",# 性质预测
+                "tabular",           # 表格数据 (追踪 TabPFN 等表格基础模型)
+
+                # === 【新增】小样本与低数据量场景 ===
+                "small data",        # 小数据集 (如 Nature 标题中的 small data)
+                "small sample",      # 小样本
+                "few-shot",          # 少样本学习 (带连字符)
+                "few shot",          # 少样本学习 (无连字符)
+                "low data",          # 低数据量
+                "data-efficient",    # 数据高效利用 (在小数据领域极常用)
+                "scarce data",       # 稀缺数据
+
+                # === 【新增】前沿网络架构 (结合物理与多任务) ===
+                "pinn",              # 物理信息神经网络 (Physics-Informed Neural Networks)
+                "physics-informed",  # 融合物理信息的 (带连字符)
+                "physics informed",  # 融合物理信息的 (无连字符)
+                "multi-task",        # 多任务预测/学习 (带连字符)
+                "multitask"          # 多任务预测/学习 (连写)
+            ]
+            
+            # 3. 如果标题中不包含以上【任何一个】关键词，直接无情抛弃，去看下一篇！
+            if not any(kw in title_text for kw in my_keywords):
                 continue
+            # ==============================================================
             
             # 提取论文分类信息 - 在subjects部分
             subjects_text = paper_dd.css(".list-subjects .primary-subject::text").get()
